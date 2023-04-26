@@ -21,7 +21,7 @@ void currenTime()
 	struct tm *local_time = localtime(&current_time);
 	char datetime[21];
 	strftime(datetime, 21, "%Y-%m-%d %H:%M:%S", local_time);
-	syslog(LOG_INFO, "[%s] ", datetime);
+	//syslog(LOG_INFO, "[%s] ", datetime);
 	printf("[%s] ", datetime);
 
 	closelog();
@@ -717,19 +717,21 @@ void createDemon()
 int main(int argc, char **argv)
 {
 	openlog("Demon", LOG_PID, LOG_USER);
+	syslog(LOG_INFO, " ");
+	syslog(LOG_INFO, "---------------------------------\n");
+	syslog(LOG_INFO, "------------>>>Hello<<<----------\n");
+	syslog(LOG_INFO, "---------->>>DAEMONN!!<<<--------\n");
+	syslog(LOG_INFO, "---------------------------------\n");
 
 	if (argc < 3)
 	{
 		currenTime();
 		syslog(LOG_INFO, "Incorrect amount of input parameters.\nCorrectly usage: ./demon [SourceDirectory] [DestinationDirectory]\nOPTIONS: -r [RecursivelySynchro] -t [TimeSleep] -d [BigFileDividingThreshold]");
 		printf("Incorrect amount of input parameters.\nCorrectly usage: ./demon [SourceDirectory] [DestinationDirectory]\nOPTIONS: -r [RecursivelySynchro] -t [TimeSleep] -d [BigFileDividingThreshold]");
-	}
-	else
-	{
+	}	{
 		options(argc, argv);
-		signal(SIGUSR1, sigusr1_handler);
 		createDemon();
-
+		signal(SIGUSR1, sigusr1_handler);
 		while (1)
 		{
 			if (!forcedSynchro)
@@ -743,8 +745,9 @@ int main(int argc, char **argv)
 			Demon(argv);
 
 			currenTime();
-			syslog(LOG_INFO, "Demon sleeps.\n");
-			printf("Demon sleeps.\n");
+			syslog(LOG_INFO, "Demon sleeps.");
+			syslog(LOG_INFO, "---------------------------------\n");
+			printf("Demon sleeps.\n\n");
 			sleep(timeSleep);
 		}
 	}
