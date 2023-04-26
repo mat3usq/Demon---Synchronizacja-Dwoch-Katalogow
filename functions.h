@@ -207,6 +207,25 @@ Funkcja "sigusr1_handler" obslubuje sygnał SIGUSR1, czyli sygnału użytkownika
 void sigusr1_handler(int signum);
 
 /*
+Funkcja "createDemon" tworzy proces demona w systemie operacyjnym. Kod jest napisany w języku C.
+
+Funkcja najpierw otwiera systemowy dziennik zdarzeń za pomocą funkcji "openlog", z ustawieniami, które powodują wyświetlenie identyfikatora procesu (PID) i identyfikatora użytkownika (UID) w logach.
+
+Następnie funkcja wywołuje funkcję "fork", aby utworzyć nowy proces. Proces potomny jest utworzony i kod kontynuuje jego wykonanie, podczas gdy proces rodzicielski kończy swoje działanie za pomocą funkcji "exit". Proces potomny będzie działał jako demon.
+
+Proces demon wywołuje funkcję "umask", aby ustawić maskę uprawnień plików na 0, co oznacza, że ​​tworzone pliki będą miały pełne uprawnienia.
+
+Następnie demon wywołuje funkcję "setsid", aby utworzyć nową sesję. Funkcja ta powoduje, że proces staje się liderem nowej sesji, procesu grupowego i zrywa związek z terminalami kontrolnymi, co oznacza, że ​​demon nie jest już zależny od terminala.
+
+Funkcja "currentTime" wywołuje inną funkcję, która zwraca aktualny czas, który jest wyświetlany na konsoli i zapisywany w dzienniku systemowym.
+
+Następnie demon wyświetla swoje PID na konsoli i zapisuje go w dzienniku systemowym za pomocą funkcji "syslog".
+
+Na koniec demon zamyka standardowe wejście, standardowe wyjście i standardowe wyjście błędów, aby zapobiec niechcianym wyjściom, a następnie zamyka dziennik zdarzeń za pomocą funkcji "closelog".
+*/
+void createDemon();
+
+/*
 Funkcja `main` jest punktem wejścia programu. Przyjmuje dwa argumenty, `argc`, który jest liczbą argumentów wiersza poleceń przekazanych do programu i `argv`, który jest tablicą łańcuchów zawierających argumenty wiersza poleceń.
 
 Funkcja najpierw sprawdza, czy liczba argumentów jest mniejsza niż trzy, czyli minimalna liczba argumentów wymagana do poprawnego działania programu. Jeśli argumentów jest mniej, na konsoli wyświetlany jest komunikat o błędzie. W przeciwnym razie program kontynuuje ustawianie opcji i obsługę sygnału.
