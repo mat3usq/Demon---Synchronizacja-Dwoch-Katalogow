@@ -35,6 +35,3 @@ dzielący pliki małe od dużych może być przekazywany jako opcjonalny argumen
 1) Wszelkie operacje na plikach należy wykonywać przy pomocy API Linuksa a nie standardowej biblioteki języka C 
 2) Kopiowanie za każdym obudzeniem całego drzewa katalogów zostanie potraktowane jako poważny błąd
 3) podobnie jak przerzucenie części zadań na shell systemowy (funkcja system)
-
-
-printf("\033[31mD\033[33mA\033[32mE\033[36mM\033[34mO\033[35mN\033[0m\n");
