@@ -15,11 +15,16 @@ void changeModTime(char *srcFilePath)
 
 void currenTime()
 {
+	openlog("Demon", LOG_PID, LOG_USER);
+
 	time_t current_time = time(NULL);
 	struct tm *local_time = localtime(&current_time);
 	char datetime[21];
 	strftime(datetime, 21, "%Y-%m-%d %H:%M:%S", local_time);
+	syslog(LOG_INFO, "[%s] ", datetime);
 	printf("[%s] ", datetime);
+
+	closelog();
 }
 
 void clearTheArray(char *arr)
@@ -30,15 +35,21 @@ void clearTheArray(char *arr)
 
 void copyDirectory(const char *srcPath, const char *dstPath)
 {
+	openlog("Demon", LOG_PID, LOG_USER);
+
 	DIR *srcDirectory = opendir(srcPath);
 	if (srcDirectory == NULL)
 	{
-		perror("Error opening source directory.");
+		currenTime();
+		printf("Error opening source directory.");
+		syslog(LOG_ERR, "Error opening source directory.");
 		exit(EXIT_FAILURE);
 	}
 	if (mkdir(dstPath, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) == -1 && errno != EEXIST)
 	{
-		perror("Error creating destination directory.");
+		currenTime();
+		printf("Error creating destination directory.");
+		syslog(LOG_ERR, "Error creating destination directory.");
 		exit(EXIT_FAILURE);
 	}
 	struct dirent *srcFileInfo;
@@ -63,9 +74,11 @@ void copyDirectory(const char *srcPath, const char *dstPath)
 
 		if (lstat(srcFilePath, &srcFileInfo) == -1)
 		{
-			perror("Error reading source file/directory statistics.");
-			printf("%s\n", srcFilePath);
-			printf("%s\n", dstFilePath);
+			currenTime();
+			printf("Error reading source file/directory statistics.");
+			syslog(LOG_ERR, "Error reading source file/directory statistics.");
+			syslog(LOG_ERR, "%s\n", srcFilePath);
+			syslog(LOG_ERR, "%s\n", dstFilePath);
 			exit(EXIT_FAILURE);
 		}
 		strftime(modTimeSrc, sizeof(modTimeSrc), "%Y-%m-%d %H:%M:%S", localtime(&srcFileInfo.st_mtime));
@@ -79,20 +92,24 @@ void copyDirectory(const char *srcPath, const char *dstPath)
 					copy(srcFilePath, dstFilePath, mmapThreshold);
 					changeModTime(srcFilePath);
 					currenTime();
+					syslog(LOG_INFO, "Different modification times: %s\n", src);
 					printf("Different modification times: %s\n", src);
 					currenTime();
+					syslog(LOG_INFO, "File: %s was successfully copied.\n", src);
 					printf("File: %s was successfully copied.\n", src);
 				}
 				else
 				{
 					currenTime();
-					printf("File with the same name was fosadsund: %s\n", src);
+					syslog(LOG_INFO, "File with the same name was found: %s\n", src);
+					printf("File with the same name was found: %s\n", src);
 				}
 			}
 			else if (S_ISDIR(srcFileInfo.st_mode))
 			{ // katalog
 				copyDirectory(srcFilePath, dstFilePath);
 				currenTime();
+				syslog(LOG_INFO, "Directory: %s was detected.\n", src);
 				printf("Directory: %s was detected.\n", src);
 			}
 		}
@@ -108,14 +125,17 @@ void copyDirectory(const char *srcPath, const char *dstPath)
 						copy(srcFilePath, dstFilePath, mmapThreshold);
 						changeModTime(srcFilePath);
 						currenTime();
+						syslog(LOG_INFO, "Different modification times: %s\n", src);
 						printf("Different modification times: %s\n", src);
 						currenTime();
+						syslog(LOG_INFO, "File: %s was successfully copied.\n", src);
 						printf("File: %s was successfully copied.\n", src);
 					}
 					else
 					{
 						currenTime();
 						printf("File with the same name was found: %s\n", src);
+						syslog(LOG_INFO, "File with the same name was found: %s\n", src);
 					}
 				}
 				else if (S_ISDIR(srcFileInfo.st_mode))
@@ -123,23 +143,32 @@ void copyDirectory(const char *srcPath, const char *dstPath)
 					copyDirectory(srcFilePath, dstFilePath);
 					currenTime();
 					printf("Directory: %s was detected.\n", src);
+					syslog(LOG_INFO, "Directory: %s was detected.\n", src);
 				}
 			}
 		}
 	}
 	if (closedir(srcDirectory) == -1)
 	{
-		perror("Error closing source directory.");
+		currenTime();
+		printf("Error closing source directory.");
+		syslog(LOG_ERR, "Error closing source directory.");
 		exit(EXIT_FAILURE);
 	}
+
+	closelog();
 }
 
 void syncDirectory(const char *srcPath, const char *dstPath)
 {
+	openlog("Demon", LOG_PID, LOG_USER);
+
 	DIR *dstDirectory = opendir(dstPath);
 	if (dstDirectory == NULL)
 	{
-		perror("Error opening destination directory.");
+		currenTime();
+		printf("Error opening destination directory.");
+		syslog(LOG_ERR, "Error opening destination directory.");
 		exit(EXIT_FAILURE);
 	}
 	struct dirent *FileOrDirectory;
@@ -156,7 +185,9 @@ void syncDirectory(const char *srcPath, const char *dstPath)
 		struct stat FileOrDirectoryInfo;
 		if (lstat(dstFilePath, &FileOrDirectoryInfo) == -1)
 		{
-			perror("Error reading target file/directory statistics.");
+			currenTime();
+			printf("Error reading target file/directory statistics.");
+			syslog(LOG_ERR, "Error reading target file/directory statistics.");
 			exit(EXIT_FAILURE);
 		}
 		if (S_ISREG(FileOrDirectoryInfo.st_mode))
@@ -166,35 +197,41 @@ void syncDirectory(const char *srcPath, const char *dstPath)
 			{
 				currenTime();
 				printf("File: %s was successfully deleted.\n", FileOrDirectory->d_name);
+				syslog(LOG_INFO, "File: %s was successfully deleted.\n", FileOrDirectory->d_name);
 				if (unlink(dstFilePath) == -1)
 				{
-					perror("Deleting target file error.");
+					currenTime();
+					printf("Deleting target file error.");
+					syslog(LOG_ERR, "Deleting target file error.");
 					exit(EXIT_FAILURE);
 				}
 			}
 		}
 		else if (S_ISDIR(FileOrDirectoryInfo.st_mode))
 		{
-			// Jeśli to katalog, rekurencyjnie synchronizuj jego zawartość
 			if (access(srcFilePath, F_OK) == -1)
 			{
 				currenTime();
 				printf("Directory: %s was successfully deleted.\n", FileOrDirectory->d_name);
+				syslog(LOG_INFO, "Directory: %s was successfully deleted.\n", FileOrDirectory->d_name);
 				if (rmdir(dstFilePath) == -1)
 				{
 					if (errno == ENOTEMPTY)
 					{
-						// Jeśli katalog nie jest pusty, usuwamy jego zawartość rekurencyjnie
-						syncDirectory("", dstFilePath); // Wywołujemy syncDirectory z pustym srcPath
+						syncDirectory("", dstFilePath);
 						if (rmdir(dstFilePath) == -1)
 						{
-							perror("Deleting target directory error.");
+							currenTime();
+							printf("Deleting target directory error.");
+							syslog(LOG_ERR, "Deleting target directory error.");
 							exit(EXIT_FAILURE);
 						}
 					}
 					else
 					{
-						perror("Deleting target directory error.");
+						currenTime();
+						printf("Deleting target directory error.");
+						syslog(LOG_ERR, "Deleting target directory error.");
 						exit(EXIT_FAILURE);
 					}
 				}
@@ -207,9 +244,13 @@ void syncDirectory(const char *srcPath, const char *dstPath)
 	}
 	if (closedir(dstDirectory) == -1)
 	{
-		perror("Error closing destination directory.");
+		currenTime();
+		printf("Error closing destination directory.");
+		syslog(LOG_ERR, "Error closing destination directory.");
 		exit(EXIT_FAILURE);
 	}
+
+	closelog();
 }
 
 int copy(char *source, char *destination, int mmapThreshold)
@@ -243,16 +284,22 @@ int copy(char *source, char *destination, int mmapThreshold)
 
 void copyUsingReadWrite(const char *srcPath, const char *dstPath, long int bufferSize)
 {
+	openlog("Demon", LOG_PID, LOG_USER);
+
 	int srcFile = open(srcPath, O_RDONLY);
 	if (srcFile == -1)
 	{
-		perror("Error opening source file.");
+		currenTime();
+		printf("Error opening source file.");
+		syslog(LOG_ERR, "Error opening source file.");
 		exit(EXIT_FAILURE);
 	}
 	int dstFile = open(dstPath, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (dstFile == -1)
 	{
-		perror("Target file open error.");
+		currenTime();
+		printf("Target file open error.");
+		syslog(LOG_ERR, "Target file open error.");
 		exit(EXIT_FAILURE);
 	}
 	char buf[bufferSize];
@@ -262,37 +309,51 @@ void copyUsingReadWrite(const char *srcPath, const char *dstPath, long int buffe
 		bytesWritten = write(dstFile, buf, bytesRead);
 		if (bytesWritten == -1)
 		{
-			perror("Error writing to target file.");
+			currenTime();
+			printf("Error writing to target file.");
+			syslog(LOG_ERR, "Error writing to target file.");
 			exit(EXIT_FAILURE);
 		}
 	}
 	if (bytesRead == -1)
 	{
-		perror("Source file read error.");
+		currenTime();
+		printf("Source file read error.");
+		syslog(LOG_ERR, "Source file read error.");
 		exit(EXIT_FAILURE);
 	}
 	if (close(srcFile) == -1 || close(dstFile) == -1)
 	{
-		perror("File close error.");
+		currenTime();
+		printf("File close error.");
+		syslog(LOG_ERR, "File close error.");
 		exit(EXIT_FAILURE);
 	}
+
+	closelog();
 }
 
 int copyUsingMMapWrite(char *source, char *destination, long int fileSize)
 {
+	openlog("Demon", LOG_PID, LOG_USER);
+
 	int fd_src, fd_dst;
 	void *src_data;
 	void *dst_data;
 
 	if ((fd_src = open(source, O_RDONLY)) == -1)
 	{
+		currenTime();
 		printf("Failed to open source file");
+		syslog(LOG_ERR, "Failed to open source file");
 		return EXIT_FAILURE;
 	}
 
 	if ((fd_dst = open(destination, O_RDWR | O_CREAT, 0644)) == -1)
 	{
+		currenTime();
 		printf("Failed to open destination file");
+		syslog(LOG_ERR, "Failed to open destination file");
 		close(fd_src);
 		return EXIT_FAILURE;
 	}
@@ -307,7 +368,9 @@ int copyUsingMMapWrite(char *source, char *destination, long int fileSize)
 	src_data = mmap(NULL, fileSize, PROT_READ, MAP_SHARED, fd_src, 0);
 	if (src_data == MAP_FAILED)
 	{
+		currenTime();
 		printf("Failed to map source file");
+		syslog(LOG_ERR, "Failed to map source file");
 		close(fd_src);
 		close(fd_dst);
 		return EXIT_FAILURE;
@@ -316,7 +379,9 @@ int copyUsingMMapWrite(char *source, char *destination, long int fileSize)
 	dst_data = mmap(NULL, fileSize, PROT_WRITE, MAP_SHARED, fd_dst, 0);
 	if (dst_data == MAP_FAILED)
 	{
+		currenTime();
 		printf("Failed to map destination file");
+		syslog(LOG_ERR, "Failed to map destination file");
 		munmap(src_data, fileSize);
 		close(fd_src);
 		close(fd_dst);
@@ -329,23 +394,29 @@ int copyUsingMMapWrite(char *source, char *destination, long int fileSize)
 	munmap(dst_data, fileSize);
 	close(fd_src);
 	close(fd_dst);
+	closelog();
 
 	return EXIT_SUCCESS;
 }
 
 void compareDestSrc(char *sourcePath, char *destinationPath)
 {
+	openlog("Demon", LOG_PID, LOG_USER);
 	DIR *sourceDir = opendir(sourcePath);
 	DIR *destinationDir = opendir(destinationPath);
 
 	if (sourceDir == NULL)
 	{
+		currenTime();
 		printf("Problem occured when trying to open the source directory\n");
+		syslog(LOG_ERR, "Problem occured when trying to open the source directory\n");
 		return;
 	}
 	if (destinationDir == NULL)
 	{
+		currenTime();
 		printf("Problem occured when trying to open the destination directory\n");
+		syslog(LOG_ERR, "Problem occured when trying to open the destination directory\n");
 		closedir(sourceDir);
 		return;
 	}
@@ -359,7 +430,9 @@ void compareDestSrc(char *sourcePath, char *destinationPath)
 		{
 			if (snprintf(entryPath, PATH_MAX, "%s/%s", sourcePath, destinationEntry->d_name) >= PATH_MAX)
 			{
+				currenTime();
 				printf("Problem occured when trying to get the full path of source file. File was not found\n");
+				syslog(LOG_ERR, "Problem occured when trying to get the full path of source file. File was not found\n");
 				exit(EXIT_FAILURE);
 			}
 			if (access(entryPath, F_OK) != 0)
@@ -367,12 +440,15 @@ void compareDestSrc(char *sourcePath, char *destinationPath)
 				clearTheArray(entryPath);
 				if (snprintf(entryPath, PATH_MAX, "%s/%s", destinationPath, destinationEntry->d_name) >= PATH_MAX)
 				{
+					currenTime();
 					printf("Problem occured when trying to get the full path of destination file. File was not found\n");
+					syslog(LOG_ERR, "Problem occured when trying to get the full path of destination file. File was not found\n");
 					exit(EXIT_FAILURE);
 				}
 				if (unlink(entryPath) == 0)
 				{
 					currenTime();
+					syslog(LOG_INFO, "File: %s was successfully deleted.\n", destinationEntry->d_name);
 					printf("File: %s was successfully deleted.\n", destinationEntry->d_name);
 				}
 			}
@@ -381,21 +457,28 @@ void compareDestSrc(char *sourcePath, char *destinationPath)
 	}
 	closedir(sourceDir);
 	closedir(destinationDir);
+	closelog();
 }
 
 void compareSrcDest(char *sourcePath, char *destinationPath)
 {
+	openlog("Demon", LOG_PID, LOG_USER);
+
 	DIR *sourceDir = opendir(sourcePath);
 	DIR *destinationDir = opendir(destinationPath);
 
 	if (sourceDir == NULL)
 	{
+		currenTime();
 		printf("Problem occured when trying to open the source directory\n");
+		syslog(LOG_ERR, "Problem occured when trying to open the source directory\n");
 		return;
 	}
 	if (destinationDir == NULL)
 	{
+		currenTime();
 		printf("Problem occured when trying to open the destination directory\n");
+		syslog(LOG_ERR, "Problem occured when trying to open the destination directory\n");
 		closedir(sourceDir);
 		return;
 	}
@@ -421,22 +504,29 @@ void compareSrcDest(char *sourcePath, char *destinationPath)
 		{
 			if (snprintf(entryPath, PATH_MAX, "%s/%s", destinationPath, sourceEntry->d_name) >= PATH_MAX)
 			{
+				currenTime();
 				printf("Problem occured when trying to get the full path of destination file\n");
+				syslog(LOG_ERR, "Problem occured when trying to get the full path of destination file\n");
 				exit(EXIT_FAILURE);
 			}
 			if (access(entryPath, F_OK) == 0)
 			{
 				currenTime();
+				syslog(LOG_INFO, "File with the same name was found: %s\n", sourceEntry->d_name);
 				printf("File with the same name was found: %s\n", sourceEntry->d_name);
 				clearTheArray(entryPath);
 				if (snprintf(entryPath, PATH_MAX, "%s/%s", sourcePath, sourceEntry->d_name) >= PATH_MAX)
 				{
+					currenTime();
 					printf("Problem occured when trying to get the full path of source file\n");
+					syslog(LOG_ERR, "Problem occured when trying to get the full path of source file\n");
 					exit(EXIT_FAILURE);
 				}
 				if (stat(entryPath, &srcFileInfo) == -1)
 				{
+					currenTime();
 					printf("Problem occured when trying to access the file info(from source)\n");
+					syslog(LOG_ERR, "Problem occured when trying to access the file info(from source)\n");
 					exit(EXIT_FAILURE);
 				}
 				strftime(modTimeSrc, sizeof(modTimeSrc), "%Y-%m-%d %H:%M:%S", localtime(&srcFileInfo.st_mtime));
@@ -449,12 +539,16 @@ void compareSrcDest(char *sourcePath, char *destinationPath)
 							clearTheArray(entryPath);
 							if (snprintf(entryPath, PATH_MAX, "%s/%s", destinationPath, destinationEntry->d_name) >= PATH_MAX)
 							{
+								currenTime();
 								printf("Problem occured when trying to get the full path of source file\n");
+								syslog(LOG_ERR, "Problem occured when trying to get the full path of source file\n");
 								exit(EXIT_FAILURE);
 							}
 							if (stat(entryPath, &destFileInfo) == -1)
 							{
+								currenTime();
 								printf("Problem occured when trying to access the file info(from destination)\n");
+								syslog(LOG_ERR, "Problem occured when trying to access the file info(from destination)\n");
 								exit(EXIT_FAILURE);
 							}
 							strftime(modTimeDest, sizeof(modTimeDest), "%Y-%m-%d %H:%M:%S", localtime(&destFileInfo.st_mtime));
@@ -463,12 +557,16 @@ void compareSrcDest(char *sourcePath, char *destinationPath)
 							{
 								if (snprintf(srcFilePathContainer, PATH_MAX, "%s/%s", sourcePath, sourceEntry->d_name) >= PATH_MAX)
 								{
+									currenTime();
 									printf("Problem occured when trying to get the full path of source file\n");
+									syslog(LOG_ERR, "Problem occured when trying to get the full path of source file\n");
 									exit(EXIT_FAILURE);
 								}
 								if (snprintf(destFilePathContainer, PATH_MAX, "%s/%s", destinationPath, destinationEntry->d_name) >= PATH_MAX)
 								{
+									currenTime();
 									printf("Problem occured when trying to get the full path of destination file\n");
+									syslog(LOG_ERR, "Problem occured when trying to get the full path of destination file\n");
 									exit(EXIT_FAILURE);
 								}
 								copy(srcFilePathContainer, destFilePathContainer, mmapThreshold);
@@ -478,7 +576,9 @@ void compareSrcDest(char *sourcePath, char *destinationPath)
 								srcTimes.modtime = srcFileInfo.st_mtime;
 								if (utime(destFilePathContainer, &srcTimes) < 0)
 								{
+									currenTime();
 									printf("Problem occured when trying to set times of dest file\n");
+									syslog(LOG_ERR, "Problem occured when trying to set times of dest file\n");
 									exit(EXIT_FAILURE);
 								}
 							}
@@ -490,35 +590,48 @@ void compareSrcDest(char *sourcePath, char *destinationPath)
 			{
 				currenTime();
 				printf("File with the same name wasn't found: %s\n", sourceEntry->d_name);
+				syslog(LOG_INFO, "File with the same name wasn't found: %s\n", sourceEntry->d_name);
+
 				if (snprintf(entryPath, PATH_MAX, "%s/%s", sourcePath, sourceEntry->d_name) >= PATH_MAX)
 				{
+					currenTime();
 					printf("Problem occured when trying to get the full path of source file\n");
+					syslog(LOG_ERR, "Problem occured when trying to get the full path of source file\n");
 					exit(EXIT_FAILURE);
 				}
 				if (stat(entryPath, &srcFileInfo) == -1)
 				{
+					currenTime();
 					printf("Problem occured when trying to access the file info(from source). File was not found\n");
+					syslog(LOG_ERR, "Problem occured when trying to access the file info(from source). File was not found\n");
 					exit(EXIT_FAILURE);
 				}
 
 				if (snprintf(srcFilePathContainer, PATH_MAX, "%s/%s", sourcePath, sourceEntry->d_name) >= PATH_MAX)
 				{
+					currenTime();
 					printf("Problem occured when trying to get the full path of source file. File was not found\n");
+					syslog(LOG_ERR, "Problem occured when trying to get the full path of source file. File was not found\n");
 					exit(EXIT_FAILURE);
 				}
 				if (snprintf(destFilePathContainer, PATH_MAX, "%s/%s", destinationPath, sourceEntry->d_name) >= PATH_MAX)
 				{
+					currenTime();
 					printf("Problem occured when trying to get the full path of destination file. File was not found\n");
+					syslog(LOG_ERR, "Problem occured when trying to get the full path of destination file. File was not found\n");
 					exit(EXIT_FAILURE);
 				}
 				copy(srcFilePathContainer, destFilePathContainer, mmapThreshold);
 				currenTime();
+				syslog(LOG_INFO, "File: %s was successfully copied.\n", sourceEntry->d_name);
 				printf("File: %s was successfully copied.\n", sourceEntry->d_name);
 				srcTimes.actime = srcFileInfo.st_atime;
 				srcTimes.modtime = srcFileInfo.st_mtime;
 				if (utime(destFilePathContainer, &srcTimes) < 0)
 				{
+					currenTime();
 					printf("Problem occured when trying to set times of dest file\n");
+					syslog(LOG_ERR, "Problem occured when trying to set times of dest file\n");
 					exit(EXIT_FAILURE);
 				}
 			}
@@ -533,6 +646,7 @@ void compareSrcDest(char *sourcePath, char *destinationPath)
 	closedir(sourceDir);
 	closedir(destinationDir);
 	compareDestSrc(sourcePath, destinationPath);
+	closelog();
 }
 
 void recursiveSynchronization(char *srcPath, char *dstPath)
@@ -562,22 +676,59 @@ void options(int argc, char **argv)
 
 void sigusr1_handler(int signum)
 {
+	openlog("Demon", LOG_PID, LOG_USER);
 	currenTime();
+	syslog(LOG_INFO, "Demon awakening by signal SIGUSR1.\n");
 	printf("Demon awakening by signal SIGUSR1.\n");
 	forcedSynchro = true;
+	closelog();
+}
+
+void createDemon()
+{
+	openlog("Demon", LOG_PID, LOG_USER);
+
+	pid_t pid, sid;
+	pid = fork();
+	if (pid < 0)
+	{
+		exit(EXIT_FAILURE);
+	}
+	if (pid > 0)
+	{
+		exit(EXIT_SUCCESS);
+	}
+	umask(0);
+	sid = setsid();
+	if (sid < 0)
+	{
+		exit(EXIT_FAILURE);
+	}
+	currenTime();
+	printf("Demon's PID of procession: %d.\n", getpid());
+	syslog(LOG_INFO, "Demon's PID of procession: %d.\n", getpid());
+
+	close(STDIN_FILENO);
+	close(STDOUT_FILENO);
+	close(STDERR_FILENO);
+	closelog();
 }
 
 int main(int argc, char **argv)
 {
+	openlog("Demon", LOG_PID, LOG_USER);
+
 	if (argc < 3)
+	{
+		currenTime();
+		syslog(LOG_INFO, "Incorrect amount of input parameters.\nCorrectly usage: ./demon [SourceDirectory] [DestinationDirectory]\nOPTIONS: -r [RecursivelySynchro] -t [TimeSleep] -d [BigFileDividingThreshold]");
 		printf("Incorrect amount of input parameters.\nCorrectly usage: ./demon [SourceDirectory] [DestinationDirectory]\nOPTIONS: -r [RecursivelySynchro] -t [TimeSleep] -d [BigFileDividingThreshold]");
+	}
 	else
 	{
 		options(argc, argv);
 		signal(SIGUSR1, sigusr1_handler);
-
-		currenTime();
-		printf("PID of procession: %d.\n", getpid());
+		createDemon();
 
 		while (1)
 		{
@@ -585,14 +736,17 @@ int main(int argc, char **argv)
 			{
 				currenTime();
 				printf("Demon awakening.\n");
+				syslog(LOG_INFO, "Demon awakening.\n");
 				forcedSynchro = false;
 			}
 
 			Demon(argv);
 
 			currenTime();
+			syslog(LOG_INFO, "Demon sleeps.\n");
 			printf("Demon sleeps.\n");
 			sleep(timeSleep);
 		}
 	}
+	closelog();
 }
