@@ -32,7 +32,6 @@ mmap/write (plik źródłowy) zostaje zamapowany w całości w pamięci. Próg
 dzielący pliki małe od dużych może być przekazywany jako opcjonalny argument.
 
 # Uwagi:  
-1) Wszelkie operacje na plikach należy wykonywać przy pomocy API
-Linuksa a nie standardowej biblioteki języka C 
+1) Wszelkie operacje na plikach należy wykonywać przy pomocy API Linuksa a nie standardowej biblioteki języka C 
 2) Kopiowanie za każdym obudzeniem całego drzewa katalogów zostanie potraktowane jako poważny błąd
-3) podobnie jak przerzucenie części zadań na shell systemowy (funkcja system). 
+3) podobnie jak przerzucenie części zadań na shell systemowy (funkcja system)
