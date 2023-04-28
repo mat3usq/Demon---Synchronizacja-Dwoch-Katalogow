@@ -497,8 +497,31 @@ int copyUsingMMapWrite(char *source, char *destination, long int fileSize)
 		return EXIT_FAILURE;
 	}
 
-	// Skopiowanie danych z pliku zrodlowego do pliku docelowego
-	memcpy(dst_data, src_data, fileSize);
+	// Skopiowanie danych z pliku zrodlowego do pliku docelowego przy pomocy funkcji write()
+	size_t remaining = fileSize;
+	char *src = src_data;
+	char *dst = dst_data;
+
+	while (remaining > 0)
+	{
+		ssize_t written = write(fd_dst, src, remaining);
+		if (written == -1)
+		{
+			// Wypisanie błędu do konsoli i logu systemowego
+			currenTime();
+			printf("Nie udało się zapisać danych do pliku docelowego");
+			syslog(LOG_ERR, "Nie udało się zapisać danych do pliku docelowego");
+			// Zwolnienie zaalokowanej pamięci, zamknięcie otwartych plików i zwrot wartości niepowodzenia
+			munmap(src_data, fileSize);
+			munmap(dst_data, fileSize);
+			close(fd_src);
+			close(fd_dst);
+			closelog();
+			return EXIT_FAILURE;
+		}
+		remaining -= written;
+		src += written;
+	}
 
 	// Zwolnienie zaalokowanej pamieci
 	munmap(src_data, fileSize);
