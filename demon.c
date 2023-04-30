@@ -993,7 +993,7 @@ int main(int argc, char **argv)
 		options(argc, argv);
 
 		// Tworzenie demona
-		// createDemon();
+		createDemon();
 		currenTime();
 		printf("PID Procesu Demona: %d.\n", getpid());
 
